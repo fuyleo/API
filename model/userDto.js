@@ -6,6 +6,7 @@ const userSchema = new Schema({
     username: {
         type: String,
         require: true,
+        min: 6
     },
     email: {
         type: String,
@@ -13,7 +14,8 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        require: true
+        require: true,
+        min: 6
     },
     isAdmin: {
         type: Boolean,
@@ -21,15 +23,11 @@ const userSchema = new Schema({
     },
     createAt: {
         type: Date,
-        default: Date.now
+        require: true
     },
     updateAt: {
         type: Date,
-        default: Date.now
-    },
-    deleteAt: {
-        type: Date,
-        default: Date.now
+        require: true
     }
 })
 userSchema.plugin(mongooseDateFormat)

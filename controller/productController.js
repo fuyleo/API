@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
-
 const multer = require('multer');
-
 const ProductDto = require("../model/ProductDto")
-
 const mongoose = require('mongoose');
-
+const pagination = require('../pagination/pagination');
+const verifyToken = require('../config/verifyToken'); 
+const MESSAGE = require('../utils/message');
 // Multer File upload settings
 const DIR = './images/';
+const { postValidation } = require('../validation/productValidation');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -36,107 +36,135 @@ var upload = multer({
     }
 });
 
-//Base URl: /api/ecommerce
+//Base URl: /api
 //Get All Product
-router.get('/products', async(req, res) => {
+router.get('/products' , pagination(ProductDto), async(req, res) => {
     try {
-        const products = await ProductDto.find();
-        if (!products) throw Error('No Items');
-        res.status(200).json(products);
+        const products = res.pagination;
+        res.status(200).json({data: products});
     } catch (err) {
-        res.status(400).json({ msg: err })
+        MESSAGE.NOT_FOUND.alert = 'Product';
+        const message = MESSAGE.NOT_FOUND.getMessage;
+        res.status(400).json({message: message});
     }
 })
 
-//Base URl: /api/ecommerce
+//Base URl: /api
 //Get Product
 router.get('/product/:id', async(req, res) => {
     try {
         const product = await ProductDto.findById(req.params.id);
-        if (!product) throw Error('Not Found Product');
         res.status(200).json(product);
     } catch (err) {
-        res.status(400).json({ msg: err })
+        MESSAGE.NOT_FOUND.alert = 'Product';
+        const message = MESSAGE.NOT_FOUND.getMessage;
+        res.status(400).json({message: message});
     }
 })
 
-//Base URl: /api/ecommerce
+//Base URl: /api
 //Post Product
-router.post('/product', upload.single('imageUrl'), async(req, res) => {
+router.post('/product', verifyToken, upload.single('imageUrl'), async(req, res) => {
 
-    const url = req.protocol + '://' + req.get('host')
+    //Validation
+    const { error } = postValidation(req.body);
+    if(error) return res.status(400).json({message: error.details[0].message.replace(/["']/g, "")});
+
+    const url = req.protocol + '://' + req.get('host');
+    createDate = new Date();
+    // updateDate = new Date();
     const product = new ProductDto({
-        title: req.body.title,
-        description: req.body.description,
-        price: req.body.price,
-        imageUrl: url + '/images/' + req.file.filename,
-        status: req.body.status
-    });
-    product.save().then(result => {
-        console.log(result);
-        res.status(201).json({
-            message: "Product has added successfully!",
-            product_details: {
-                _id: result._id,
-                title: result.title,
-                description: result.description,
-                price: result.price,
-                imageUrl: result.imageUrl,
-                status: result.status
-            }
-        })
-    }).catch(err => {
-        console.log(err),
-            res.status(500).json({
-                error: err
-            });
-    })
-});
-
-//Base URl: /api/ecommerce
-//Delete Product
-router.delete('/product/:id', async(req, res) => {
-    try {
-        const product = await ProductDto.findByIdAndDelete(req.params.id);
-        if (!product) throw Error('No product found!');
-        res.status(200).json({ success: true })
-    } catch (err) {
-        res.status(400).json({ msg: err })
-    }
-})
-
-//Base URl: /api/ecommerce
-//Update Product
-router.patch('/product/:id', upload.single('imageUrl'), async(req, res) => {
-
-    const url = req.protocol + '://' + req.get('host')
-    const product = new ProductDto({
-        _id: req.params.id,
         title: req.body.title,
         description: req.body.description,
         price: req.body.price,
         imageUrl: url + '/images/' + req.file.filename,
         status: req.body.status,
-        update: Date.now
+        createAt: createDate,
+        updateAt: ''
     });
-    const result = await ProductDto.findByIdAndUpdate(req.params.id, product, { new: true }).then(result => {
-        console.log(result);
+    product.save().then(result => {
+        MESSAGE.SUCCESS.alert = 'Product';
+        MESSAGE.SUCCESS.request = 'added';
+        const message = MESSAGE.SUCCESS.getMessage;
         res.status(201).json({
-            message: "Product has been update successfully!",
-            product_details: {
+            message: message,
+            data: {
                 _id: result._id,
                 title: result.title,
                 description: result.description,
                 price: result.price,
                 imageUrl: result.imageUrl,
-                status: result.status
+                status: result.status,
+                createAt: result.createAt,
+                updateAt: result.updateAt
             }
         })
     }).catch(err => {
-        console.log(err),
-            res.status(500).json({
-                error: err
-            });
+        res.status(500).json({message: err});
+    })
+});
+
+//Base URl: /api
+//Delete Product
+router.delete('/product/:id', verifyToken, async(req, res) => {
+    try {
+        const product = await ProductDto.findByIdAndDelete(req.params.id);
+        MESSAGE.SUCCESS.alert='Product';
+        MESSAGE.SUCCESS.request='deleted';
+        const message = MESSAGE.SUCCESS.getMessage;
+        res.status(200).json({ 
+            message: message
+         })
+    } catch (err) {
+        MESSAGE.NOT_FOUND.alert='Product';
+        const message = MESSAGE.NOT_FOUND.getMessage;
+        res.status(400).json({ message: message })
+    }
+})
+
+//Base URl: /api
+//Update Product
+router.patch('/product/:id', verifyToken, upload.single('imageUrl'), async(req, res) => {
+
+    let product;
+    let newDate = new Date();
+    const url = req.protocol + '://' + req.get('host');
+
+    if(req.file != undefined) {
+        product = new ProductDto({
+            _id: req.params.id,
+            title: req.body.title,
+            description: req.body.description,
+            price: req.body.price,
+            imageUrl: url + '/images/' + req.file.filename,
+            status: req.body.status,
+            updateAt: newDate
+        });
+    }else {
+        product = new ProductDto({
+            _id: req.params.id,
+            title: req.body.title,
+            description: req.body.description,
+            price: req.body.price,
+            status: req.body.status,
+            updateAt: newDate
+        });
+    }
+
+    const result = await ProductDto.findByIdAndUpdate(req.params.id, product, { new: true }).then(result => {
+        MESSAGE.SUCCESS.alert='Product';
+        MESSAGE.SUCCESS.request='been update';
+        const message = MESSAGE.SUCCESS.getMessage;
+        res.status(201).json({
+            message: message,
+            data: result
+        })
+    }).catch(err => {
+        MESSAGE.NOT_FOUND.alert='Product';
+        const message = MESSAGE.NOT_FOUND.getMessage;
+        res.status(400).json({
+            message: message
+        });
     })
 });
 

@@ -4,8 +4,8 @@ const app = express();
 const cors = require('cors')
 app.use(cors());
 
-let Url = require("./config/configDB").dbUrl;
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 
 const path = require("path");
 
@@ -20,7 +20,8 @@ app.use(express.json())
 //End of Body Parser Middleware
 
 //Database Connetion
-mongoose.connect(Url, {
+dotenv.config();
+mongoose.connect(process.env.DB_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   useFindAndModify: false,
@@ -28,10 +29,10 @@ mongoose.connect(Url, {
 }).then(() => {
 })
 mongoose.connection.on('connected', (req, res)=> {
-    console.log("Mongoose is connected!!");
+    console.log("Server is up and running");
 })
 mongoose.connection.on('error', (req, res)=> {
-    console.log("Mongoose went wrong");
+    console.log("Server is down!!!");
 })
 //End of database connection
 
@@ -41,10 +42,10 @@ app.use(bodyParser.urlencoded({
 app.use(cors());
 
 //Routes
-app.use('/api/ecommerce', product);
-app.use('/api/ecommerce', user);
-app.use('/api/ecommerce', cart);
-app.use('/api/ecommerce', order);
+app.use('/api', product);
+app.use('/api', user);
+app.use('/api', cart);
+app.use('/api', order);
 
 app.use('/images', express.static(path.join('images')));
 //End of routes

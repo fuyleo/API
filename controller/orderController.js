@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const OrderDto = require("../model/orderDto")
+const OrderDto = require("../model/OrderDto")
 
 //Base URl: /api/ecommerce
 //Get All Order

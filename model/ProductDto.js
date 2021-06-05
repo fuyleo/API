@@ -28,11 +28,11 @@ const productSchema = new Schema({
     },
     createAt: {
         type: Date,
-        default: Date.now
+        require: true
     },
     updateAt: {
         type: Date,
-        default: Date.now
+        require: true
     }
 })
 productSchema.plugin(mongooseDateFormat)

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const CartDto = require("../model/cartDto")
+const CartDto = require("../model/CartDto")
 
 //Base URl: /api/ecommerce
 //Get All Cart
